@@ -1,6 +1,6 @@
 import cv2
 import matplotlib.pyplot as plt
-from functions.imgproc import gamma_correction
+from functions.imgproc import gamma_correction, median_filtering
 
 plt.style.use("seaborn-v0_8-paper")
 
@@ -13,17 +13,19 @@ cv2.imshow("Dark Image", img_dark)
 cv2.waitKey(5000)
 
 img_dark_corrected = gamma_correction(img_dark, 0.2)
-cv2.imshow("Gamma Corrected Image (gamma = 0.2)", img_dark_corrected)
+img_dark_filtered = median_filtering(img_dark, 7)
+
+cv2.imshow("Median Filtered Image (kernel = 3)", img_dark_filtered)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
 
 plt.hist(
-    img_dark_corrected.ravel(),
+    img_dark_filtered.ravel(),
     256,
     [0, 256],
-    label = "Corrected Dark Image",
+    label = "Filtered Dark Image",
 );
-plt.title("Gamma Corrected Image (Gamma = 0.2)");
+plt.title("Median Filtered Image (kernel = 3)");
 plt.xlabel("Gray Level");
 plt.ylabel("Count");
 plt.show();
