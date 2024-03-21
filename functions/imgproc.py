@@ -18,3 +18,20 @@ def bitPlaneSlicing(img: np.ndarray, depth: int, dtype: type = np.uint8) -> np.n
     cv2.bitwise_and(img, mask, sliced)
     
     return sliced
+
+def gamma_correction(image: np.ndarray, gamma: float) -> np.ndarray:
+    """
+    Apply gamma correction to the input image.
+
+    Parameters:
+        image (`np.ndarray`): Input image (numpy array).
+        gamma (`float`): Gamma value for correction.
+
+    Returns:
+        `np.ndarray`: Corrected image.
+    """
+    table = np.array([((i / 255.0) ** gamma) * 255 for i in np.arange(0, 256)]).astype("uint8")
+
+    corrected_image = cv2.LUT(image, table)
+
+    return corrected_image
