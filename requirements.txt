@@ -1,0 +1,8 @@
+opencv-python
+numpy
+scipy
+matplotlib
+pandas
+polar
+scikit-learn
+scikit-learn-intelex
