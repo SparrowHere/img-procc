@@ -305,7 +305,7 @@ cv2.imshow("Dark Equalized Image", img_dark_eq)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
 
-Processing.plot_histogram(img_dark_eq, "#1f77b4", "Dark Equalized Image")
+Processing.plot_histogram(img_dark_eq, "#1f77b4", "Dark Equalized Image (OpenCV)")
 # %% Q1b | Histogram Equalization (from Scratch)
 
 img_dark_eq = Processing.histogram_equalization(img_dark)
@@ -314,7 +314,7 @@ cv2.imshow("Dark Equalized Image", img_dark_eq)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
 
-Processing.plot_histogram(img_dark_eq, "#1f77b4", "Dark Equalized Image")
+Processing.plot_histogram(img_dark_eq, "#1f77b4", "Dark Equalized Image (from Scratch)")
 # %% Q1c | Shadowy Image Restoration
 
 img_shadow_gauss = Processing.gaussian_blur(img_shadow, (121, 121), 128)
