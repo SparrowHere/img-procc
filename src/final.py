@@ -126,7 +126,7 @@ class Processing:
 
 
     @staticmethod
-    def gaussian_FFT(image: np.ndarray, sigma: float) -> np.ndarray:
+    def gaussian_FFT(image: np.ndarray, sigma: float) -> tuple[np.ndarray]:
         """
         Apply Gaussian filter to the input image in frequency domain.
 
@@ -138,19 +138,19 @@ class Processing:
             np.ndarray: Filtered image.
         """
         # Compute FFT of an Image
-        f_transform = np.fft.fft2(image)
+        f_transform = np.fft.fft2(np.float32(image))
         f_transform_shifted = np.fft.fftshift(f_transform)
         
         # Compute Center Points
         rows, cols = image.shape
         crow, ccol = rows // 2 , cols // 2
         
-        x = np.arange(cols) - crow
-        y = np.arange(rows) - ccol
+        x = np.arange(cols) - ccol
+        y = np.arange(rows) - crow
         X, Y = np.meshgrid(x, y)
         
         # Create Gaussian Filter
-        gaussian_filter = np.exp(-(X**2 + Y**2) / (2 * sigma**2))
+        gaussian_filter = np.exp(- (X**2 + Y**2) / (2 * sigma**2))
         
         # Apply Filter
         f_transform_shifted = np.multiply(f_transform_shifted, gaussian_filter)
@@ -160,7 +160,7 @@ class Processing:
         filtered_image = np.fft.ifft2(f_transform)
         filtered_image = np.abs(filtered_image).clip(0, 255).astype(np.uint8)
         
-        return filtered_image
+        return gaussian_filter, filtered_image
 
     @staticmethod
     def butterworth_FFT(img: np.ndarray, cutoff_frequency_ratio: float, order: float) -> tuple[np.ndarray]:
@@ -365,8 +365,8 @@ cv2.destroyAllWindows()
 img_nn_ideal = Processing.ideal_LP_FFT(img_nn, 30)
 img_sp_ideal = Processing.ideal_LP_FFT(img_sp, 30)
 
-img_nn_gaussian = Processing.gaussian_FFT(img_nn, 20)   # ( !1! )
-img_sp_gaussian = Processing.gaussian_FFT(img_sp, 20)
+img_nn_gaussian = Processing.gaussian_FFT(img_nn, 20)[1]   # ( !1! )
+img_sp_gaussian = Processing.gaussian_FFT(img_sp, 20)[1]
 
 img_nn_bttr = Processing.butterworth_FFT(img_nn, 0.005, 0.35)[1]
 img_sp_bttr = Processing.butterworth_FFT(img_sp, 0.005, 0.35)[1]
