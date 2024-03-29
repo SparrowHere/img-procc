@@ -73,8 +73,6 @@ def histogram_equalization(image: np.ndarray) -> np.ndarray:
 
     return equalized_image.astype(np.uint8)
 
-
-
 # Read the image/s
 Path: str = "/home/sparrow/cv/images"
 img_gray: np.ndarray = cv2.imread(Path + "/gray9.jpg")
