@@ -377,17 +377,16 @@ img_sp_gaussian = Processing.gaussian_FFT(img_sp, 20)[1]
 img_nn_bttr = Processing.butterworth_FFT(img_nn, 0.005, 0.35)[1]
 img_sp_bttr = Processing.butterworth_FFT(img_sp, 0.005, 0.35)[1]
 
-cv2.imshow("Filtered Image NN (Ideal LP)", img_nn_ideal)
-cv2.imshow("Ideal LP Filter", img_nn_ideal)
+# cv2.imshow("Filtered Image NN (Ideal LP)", img_nn_ideal)
+# cv2.imshow("Filtered Image SP (Ideal LP)", img_sp_ideal)
 
-cv2.imshow("Filtered Image SP (Ideal LP)", img_sp_ideal)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+# cv2.waitKey(0)
+# cv2.destroyAllWindows()
 
-cv2.imshow("Filtered Image NN (Gaussian LP)", img_nn_gaussian)
-cv2.imshow("Filtered Image SP (Gaussian LP)", img_sp_gaussian)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+# cv2.imshow("Filtered Image NN (Gaussian LP)", img_nn_gaussian)
+# cv2.imshow("Filtered Image SP (Gaussian LP)", img_sp_gaussian)
+# cv2.waitKey(0)
+# cv2.destroyAllWindows()
 
 cv2.imshow("Filtered Image NN (Butterworth LP)", img_nn_bttr)
 cv2.imshow("Filtered Image SP (Butterworth LP)", img_sp_bttr)
