@@ -90,7 +90,7 @@ class Processing:
     
     @staticmethod
 
-    def ideal_LP_FFT(image: np.ndarray, cutoff_frequency: float) -> np.ndarray:
+    def ideal_LP_FFT(image: np.ndarray, cutoff_frequency: float) -> tuple[np.ndarray]:
         """
         Apply ideal low-pass filter to the input image in frequency domain.
 
@@ -122,7 +122,7 @@ class Processing:
         filtered_image = np.fft.ifft2(f_transform)
         filtered_image = np.abs(filtered_image).clip(0, 255).astype(np.uint8)
         
-        return filtered_image
+        return mask, filtered_image
 
 
     @staticmethod
@@ -362,16 +362,24 @@ cv2.waitKey(0)
 cv2.destroyAllWindows()
 # %% Q1e | Noise Reduction in Frequency Domain
 
-img_nn_ideal = Processing.ideal_LP_FFT(img_nn, 30)
-img_sp_ideal = Processing.ideal_LP_FFT(img_sp, 30)
+img_nn_ideal_fft = Processing.ideal_LP_FFT(img_nn, 30)[0]
+img_nn_ideal = Processing.ideal_LP_FFT(img_nn, 30)[1]
 
-img_nn_gaussian = Processing.gaussian_FFT(img_nn, 20)[1]   # ( !1! )
+img_sp_ideal_fft = Processing.ideal_LP_FFT(img_sp, 30)[0]
+img_sp_ideal = Processing.ideal_LP_FFT(img_sp, 30)[1]
+
+img_nn_gaussian_fft = Processing.gaussian_FFT(img_nn, 20)[0]
+img_nn_gaussian = Processing.gaussian_FFT(img_nn, 20)[1]
+
+img_sp_gaussian_fft = Processing.gaussian_FFT(img_sp, 20)[0]
 img_sp_gaussian = Processing.gaussian_FFT(img_sp, 20)[1]
 
 img_nn_bttr = Processing.butterworth_FFT(img_nn, 0.005, 0.35)[1]
 img_sp_bttr = Processing.butterworth_FFT(img_sp, 0.005, 0.35)[1]
 
 cv2.imshow("Filtered Image NN (Ideal LP)", img_nn_ideal)
+cv2.imshow("Ideal LP Filter", img_nn_ideal)
+
 cv2.imshow("Filtered Image SP (Ideal LP)", img_sp_ideal)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
