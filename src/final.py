@@ -7,6 +7,7 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+from skimage.filters import butterworth
 
 plt.style.use("seaborn-v0_8-paper")
 
@@ -88,6 +89,7 @@ class Processing:
         return equalized_image.astype(np.uint8)
     
     @staticmethod
+
     def ideal_LP_FFT(image: np.ndarray, cutoff_frequency: float) -> np.ndarray:
         """
         Apply ideal low-pass filter to the input image in frequency domain.
@@ -99,27 +101,29 @@ class Processing:
         Returns:
             np.ndarray: Filtered image.
         """
-        # Compute FFT of an Image
-        f_transform = np.fft.fft2(image)
+        # Compute FFT of the image
+        f_transform = np.fft.fft2(np.float32(image))
         f_transform_shifted = np.fft.fftshift(f_transform)
-        
-        # Compute Center Points
+                
+        # Compute center points
         rows, cols = image.shape
-        crow, ccol = rows // 2 , cols // 2
+        crow, ccol = rows // 2, cols // 2
         
-        # Create Ideal Low-Pass Filter
+        # Create ideal low-pass filter mask
         mask = np.zeros((rows, cols), np.uint8)
-        mask[int(crow - cutoff_frequency):int(crow + cutoff_frequency), int(ccol - cutoff_frequency):int(ccol + cutoff_frequency)] = 1
+        mask[int(crow - cutoff_frequency):int(crow + cutoff_frequency), 
+            int(ccol - cutoff_frequency):int(ccol + cutoff_frequency)] = 1
         
-        # Apply Filter
-        f_transform_shifted = f_transform_shifted * mask
+        # Apply filter
+        f_transform_shifted = np.multiply(f_transform_shifted, mask)
         
-        # Compute IFFT of an Image
+        # Compute inverse FFT of the filtered image
         f_transform = np.fft.ifftshift(f_transform_shifted)
         filtered_image = np.fft.ifft2(f_transform)
-        filtered_image = np.abs(filtered_image)
+        filtered_image = np.abs(filtered_image).clip(0, 255).astype(np.uint8)
         
         return filtered_image
+
 
     @staticmethod
     def gaussian_FFT(image: np.ndarray, sigma: float) -> np.ndarray:
@@ -133,6 +137,10 @@ class Processing:
         Returns:
             np.ndarray: Filtered image.
         """
+        # Compute FFT of an Image
+        f_transform = np.fft.fft2(image)
+        f_transform_shifted = np.fft.fftshift(f_transform)
+        
         # Compute Center Points
         rows, cols = image.shape
         crow, ccol = rows // 2 , cols // 2
@@ -144,51 +152,51 @@ class Processing:
         # Create Gaussian Filter
         gaussian_filter = np.exp(-(X**2 + Y**2) / (2 * sigma**2))
         
-        # Compute FFT of an Image
-        f_transform = np.fft.fft2(image)
-        f_transform_shifted = np.fft.fftshift(f_transform)
-        
         # Apply Filter
-        f_transform_shifted = f_transform_shifted * gaussian_filter
+        f_transform_shifted = np.multiply(f_transform_shifted, gaussian_filter)
         
         # Compute IFFT of an Image
         f_transform = np.fft.ifftshift(f_transform_shifted)
         filtered_image = np.fft.ifft2(f_transform)
-        filtered_image = np.abs(filtered_image)
+        filtered_image = np.abs(filtered_image).clip(0, 255).astype(np.uint8)
         
         return filtered_image
 
     @staticmethod
-    def butterworth_FFT(image: np.ndarray, cutoff_frequency: float, order: float) -> np.ndarray:
+    def butterworth_FFT(img: np.ndarray, cutoff_frequency_ratio: float, order: float) -> tuple[np.ndarray]:
         """
         Apply Butterworth filter to the input image in frequency domain.
 
         Parameters:
-            image (np.ndarray): Input image (numpy array).
-            cutoff_frequency (float): Cutoff frequency of the filter.
+            img (np.ndarray): Input image (numpy array).
+            cutoff_frequency_ratio (float): Cutoff frequency ratio of the filter.
             order (float): Order of the filter.
 
         Returns:
             np.ndarray: Filtered image.
         """
-        f_transform = np.fft.fft2(image)
-        f_transform_shifted = np.fft.fftshift(f_transform)
-        
-        rows, cols = image.shape
-        crow, ccol = rows // 2 , cols // 2
-        
-        x = np.arange(cols) - crow
-        y = np.arange(rows) - ccol
-        X, Y = np.meshgrid(x, y)
-        
-        # Butterworth filter in frequency domain
-        butterworth_filter = 1 / (1 + (np.sqrt(X**2 + Y**2) / cutoff_frequency)**(2 * order))
-        
-        f_transform_shifted = f_transform_shifted * butterworth_filter
-        f_transform = np.fft.ifftshift(f_transform_shifted)
-        filtered_image = np.fft.ifft2(f_transform)
-        filtered_image = np.abs(filtered_image)
-        return filtered_image
+        # Compute FFT of the image
+        img_f = np.fft.fft2(np.float32(img)) / (img.shape[0] * img.shape[1])
+        img_fs = np.fft.fftshift(img_f)
+        img_fsm = 20 * np.log(np.abs(img_fs))
+
+        # Apply Butterworth filter
+        img_bttr = butterworth(
+            img,
+            cutoff_frequency_ratio=cutoff_frequency_ratio,
+            order=order,
+            high_pass=False,
+            squared_butterworth=True,
+            npad=0
+        )
+        img_bttr_n = np.uint8(255 * ((img_bttr - img_bttr.min()) / (img_bttr.max() - img_bttr.min())))
+
+        # Compute FFT of the filtered image
+        img_bttr_n_f = np.fft.fft2(img_bttr_n) / (img_bttr_n.shape[0] * img_bttr_n.shape[1])
+        img_bttr_n_fs = np.fft.fftshift(img_bttr_n_f)
+        img_bttr_n_fsm = 20 * np.log(np.abs(img_bttr_n_fs))
+
+        return img_bttr_n_fsm, img_bttr_n
 
     @staticmethod
     def laplacian(image: np.ndarray) -> np.ndarray:
@@ -251,9 +259,8 @@ class Processing:
         filtered_image = cv2.GaussianBlur(image, kernel_size, sigma)
         return filtered_image
 
-#%% Q1a | Histograms and Restoration Operations
+#%% Preparation
 
-# Read the image/s
 Path: str = "/home/sparrow/cv/images"
 img_gray: np.ndarray = cv2.imread(Path + "/gray9.jpg")
 img_dark: np.ndarray = cv2.imread(Path + "/dark9.jpg")
@@ -261,12 +268,12 @@ img_shadow: np.ndarray = cv2.imread(Path + "/shadow9.jpg")
 img_nn: np.ndarray = cv2.imread(Path + "/9nn.jpg")
 img_sp: np.ndarray = cv2.imread(Path + "/9sp.jpg")
 
-# Convert images to Grayscale U8
 img_dark = cv2.cvtColor(img_dark, cv2.COLOR_RGB2GRAY)
 img_gray = cv2.cvtColor(img_gray, cv2.COLOR_RGB2GRAY)
 img_shadow = cv2.cvtColor(img_shadow, cv2.COLOR_RGB2GRAY)
 img_nn = cv2.cvtColor(img_nn, cv2.COLOR_RGB2GRAY)
 img_sp = cv2.cvtColor(img_sp, cv2.COLOR_RGB2GRAY)
+#%% Q1a | Histograms and Restoration Operations
 
 Processing.plot_histogram(img_gray, "#ff7f0e", "Histogram of the Gray Image")
 Processing.plot_histogram(img_dark, "#1f77b4", "Histogram of the Gray Image")
@@ -355,9 +362,46 @@ cv2.waitKey(0)
 cv2.destroyAllWindows()
 # %% Q1e | Noise Reduction in Frequency Domain
 
-img_nn_ideal = Processing.ideal_LP_FFT(img_nn, 25)
-cv2.imshow("Filtered Image (Ideal LP)", img_nn_ideal)
+img_nn_ideal = Processing.ideal_LP_FFT(img_nn, 30)
+img_sp_ideal = Processing.ideal_LP_FFT(img_sp, 30)
 
+img_nn_gaussian = Processing.gaussian_FFT(img_nn, 20)   # ( !1! )
+img_sp_gaussian = Processing.gaussian_FFT(img_sp, 20)
+
+img_nn_bttr = Processing.butterworth_FFT(img_nn, 0.005, 0.35)[1]
+img_sp_bttr = Processing.butterworth_FFT(img_sp, 0.005, 0.35)[1]
+
+cv2.imshow("Filtered Image NN (Ideal LP)", img_nn_ideal)
+cv2.imshow("Filtered Image SP (Ideal LP)", img_sp_ideal)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+
+cv2.imshow("Filtered Image NN (Gaussian LP)", img_nn_gaussian)
+cv2.imshow("Filtered Image SP (Gaussian LP)", img_sp_gaussian)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+
+cv2.imshow("Filtered Image NN (Butterworth LP)", img_nn_bttr)
+cv2.imshow("Filtered Image SP (Butterworth LP)", img_sp_bttr)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+# %% Q1f | Bringing-out Edges
+
+# Sharpening Kernel
+K = np.array([
+    [0, -1, 0],
+    [-1, 4, -1],
+    [0, -1, 0]
+])
+
+img_gray_sharp = cv2.filter2D(img_gray, -1, K)
+
+# Canny Filter
+img_gray_canny = cv2.Canny(img_gray, 50, 150)
+
+cv2.imshow("Original Image", img_gray)
+cv2.imshow("Filtered Image (Sharpen)", img_gray_sharp)
+cv2.imshow("Filtered Image (Canny)", img_gray_canny)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
 # %%
