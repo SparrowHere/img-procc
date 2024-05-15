@@ -8,11 +8,17 @@ import matplotlib.pyplot as plt
 plt.style.use("seaborn-v0_8-paper")
 plt.rcParams["font.family"] = "monospace"
 
-from skimage.segmentation import active_contour
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-from skimage.segmentation import active_contour
+from skimage import data
+from skimage.util import img_as_float
+from skimage.segmentation import (
+    morphological_chan_vese,
+    morphological_geodesic_active_contour,
+    inverse_gaussian_gradient,
+    checkerboard_level_set,
+)
 # %%
 class Image:
     def __init__(self, path: str) -> None:
@@ -20,6 +26,7 @@ class Image:
         self.image: np.ndarray = cv2.imread(path)
         self.gray: np.ndarray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
         self.channels: Sequence[np.ndarray] = cv2.split(self.image)
+        self.store_evolution_in = lambda lst: lambda x: lst.append(np.copy(x))
     
     @staticmethod
     def filename(filename: str) -> int:
@@ -179,33 +186,31 @@ class Image:
         clustered_image = segmented.reshape(self.image.shape)
         return clustered_image
     
-    def Snakes(self, to_gray: bool = True) -> np.ndarray:
+    def Snakes(self, to_gray: bool = True):
         """
-        Applies active contours (snakes) to the image.
+        Applies segmentation using morpological snakes to the image.
 
         Parameters:
-            to_gray (`bool`): Whether to convert the image to grayscale before applying the active contours. Default is `True`.
+            to_gray (`bool`): Whether to convert the image to grayscale before applying the snake. Default is `True`.
 
         Returns:
-            `np.ndarray`: The image with the active contours.
+            `np.ndarray`: Segmented image.
 
         """
-        image = self.gray if to_gray else cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
-        
-        s = np.linspace(0, 2*np.pi, 400)
-        r = 100 + 100*np.sin(s) # type: ignore
-        c = 220 + 100*np.cos(s) # type: ignore
-        
-        init = np.array([r, c]).T   # Initial snake
-        snake = active_contour(image, init, alpha=0.015, beta=10, gamma=0.001)  # Iteratively optimize the contour
-        
-        # Create an output image to show the final contour
-        snake_image = np.copy(image)
-        for (x, y) in snake:
-            cv2.circle(snake_image, (int(x), int(y)), 1, (0, 255, 0), -1)   # Draw a circle at each point of the snake
-        return snake_image
+        image = self.gray if to_gray else self.image
+        init_ls = np.zeros(image.shape, dtype=np.int8)
+        init_ls[10 : -10, 10: -10] = 1
+        evolution = []
+        callback = self.store_evolution_in(evolution)
+        ls = morphological_chan_vese(
+            image, num_iter=35, init_level_set=init_ls, smoothing=3, iter_callback=callback # type: ignore
+        )
+        return ls
 
 # %%
+
+DIR = "/home/sparrow/cv/data/cables"
+
 images = [
     Image("/home/sparrow/cv/data/cables/1.png"),
     Image("/home/sparrow/cv/data/cables/2.png"),
@@ -221,6 +226,8 @@ images = [
     Image("/home/sparrow/cv/data/cables/15.png"),
     Image("/home/sparrow/cv/data/cables/16.png")
 ]
+#%% 
+titles = [Image.filename(image.path) for image in images]
 # %%
 # Adaptive Thresholding
 adaptive_thresholded_images = []
@@ -239,7 +246,6 @@ contours = [image.contours(denoised) for denoised in denoised_images]
 contrast_images = [np.log(contour + 2) for contour in contours]
 
 # Display the images
-titles = [Image.filename(image.path) for image in images]
 Image.subplot(contrast_images, titles=["Cable: {}".format(title) for title in titles], rows=3, cols=5, gray=True, cmap='gray', sup_title='Adaptive Thresholding')
 # %%
 # Otsu Thresholding
@@ -250,7 +256,6 @@ for i, image in enumerate(images):
     otsu_thresholded_images.append(threshold)
     
 # Display the images
-titles = [Image.filename(image.path) for image in images]
 Image.subplot(otsu_thresholded_images, titles=["Cable: {}".format(title) for title in titles], rows=3, cols=5, gray=True, cmap='gray', sup_title='Otsu Thresholding')
 # %%
 # KMeans Thresholding
@@ -263,5 +268,5 @@ Image.subplot(kmeans_images, titles=["Cable: {}".format(title) for title in titl
 snake_images = [image.Snakes(to_gray=True) for image in images]
 
 # Display the images
-Image.subplot(snake_images, titles=["Cable: {}".format(title) for title in titles], rows=3, cols=5, gray=False, cmap='gray', sup_title='Active Contours (Snakes)')
+Image.subplot(snake_images, titles=["Cable: {}".format(title) for title in titles], rows=3, cols=5, gray=False, cmap='gray', sup_title='Active Contours (Snakes)') # type: ignore
 # %%
