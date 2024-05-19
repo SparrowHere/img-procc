@@ -11,14 +11,6 @@ plt.rcParams["font.family"] = "monospace"
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-from skimage import data
-from skimage.util import img_as_float
-from skimage.segmentation import (
-    morphological_chan_vese,
-    morphological_geodesic_active_contour,
-    inverse_gaussian_gradient,
-    checkerboard_level_set,
-)
 # %%
 class Image:
     def __init__(self, path: str) -> None:
@@ -108,7 +100,8 @@ class Image:
 
         """
         image = self.gray if to_gray else self.channels[channel]
-        threshold = cv2.adaptiveThreshold(image, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 11, 2)
+        blurred_image = cv2.GaussianBlur(image, (5, 5), 0)      # Apply blur to the image to remove noise
+        threshold = cv2.adaptiveThreshold(blurred_image, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 11, 2)
         return threshold
     
     def otsuThresh(self, to_gray: bool = True, channel: int = 0) -> np.ndarray:
@@ -127,7 +120,8 @@ class Image:
             image = self.gray
         else:
             image = self.channels[channel]
-        _, threshold = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        blurred_image = cv2.GaussianBlur(image, (5, 5), 0)      # Apply blur to the image to remove noise  
+        _, threshold = cv2.threshold(blurred_image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         return threshold
     
     def denoise(self, image: np.ndarray, strategy: str = 'median') -> np.ndarray:
@@ -149,24 +143,8 @@ class Image:
         else:
             raise ValueError("Unknown denoising strategy")
         return denoised_image
-    
-    def contours(self, image: np.ndarray) -> np.ndarray:
-        """
-        Finds the contours in the image and draws them on the image.
 
-        Parameters:
-            image (`np.ndarray`): The input image.
-
-        Returns:
-            `np.ndarray`: The image with contours drawn.
-
-        """
-        contours, _ = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        contour_image = np.zeros_like(image)
-        cv2.drawContours(contour_image, contours, -1, (255, 255, 255), 3)
-        return contour_image
-
-    def KMeans(self, k: int = 2) -> np.ndarray:
+    def KMeans(self, to_gray: bool = True, k: int = 2) -> np.ndarray:
         """
         Applies K-Means clustering to the image.
 
@@ -177,38 +155,37 @@ class Image:
             `np.ndarray`: The clustered image.
 
         """
-        image = self.image.reshape((-1, 3))
-        image = np.float32(image)
+        image = self.gray if to_gray else self.image
+        Z = image.reshape((-1, 3))
+        Z = np.float32(Z)
         criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.2)
-        _, labels, centers = cv2.kmeans(image, k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS) # type: ignore
+        _, labels, centers = cv2.kmeans(Z, k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS) # type: ignore
         centers = np.uint8(centers)
-        segmented = centers[labels.flatten()] # type: ignore
-        clustered_image = segmented.reshape(self.image.shape)
+        clustered_image = centers[labels.flatten()] # type: ignore
+        clustered_image = clustered_image.reshape((image.shape))
         return clustered_image
-    
-    def Snakes(self, to_gray: bool = True):
+
+    def Snakes(self, to_gray: bool = True) -> np.ndarray:
         """
-        Applies segmentation using morpological snakes to the image.
+        Applies active contours (snakes) to the image.
 
         Parameters:
-            to_gray (`bool`): Whether to convert the image to grayscale before applying the snake. Default is `True`.
+            to_gray (`bool`): Whether to convert the image to grayscale before applying the active contours. Default is `True`.
 
         Returns:
-            `np.ndarray`: Segmented image.
+            `np.ndarray`: The image with the active contours.
 
         """
-        image = self.gray if to_gray else self.image
-        init_ls = np.zeros(image.shape, dtype=np.int8)
-        init_ls[10 : -10, 10: -10] = 1
-        evolution = []
-        callback = self.store_evolution_in(evolution)
-        ls = morphological_chan_vese(
-            image, num_iter=35, init_level_set=init_ls, smoothing=3, iter_callback=callback # type: ignore
-        )
-        return ls
-
+        image = self.gray if to_gray else cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
+        
+        blurred_image = cv2.GaussianBlur(image, (5, 5), 0)
+        edges = cv2.Canny(blurred_image, 50, 150)
+        
+        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contour_image = np.zeros_like(image)
+        cv2.drawContours(contour_image, contours, -1, (255, 255, 255), 2)
+        return contour_image
 # %%
-
 DIR = "/home/sparrow/cv/data/cables"
 
 images = [
@@ -239,11 +216,8 @@ for i, image in enumerate(images):
 # Denoising
 denoised_images = [image.denoise(thresh, strategy='median') for thresh in adaptive_thresholded_images]
 
-# Extract the contours from the adaptive thresholded images
-contours = [image.contours(denoised) for denoised in denoised_images]
-
 # Improve the brightness and contrast of the contour images
-contrast_images = [np.log(contour + 2) for contour in contours]
+contrast_images = [np.log(image + 2) for image in denoised_images]
 
 # Display the images
 Image.subplot(contrast_images, titles=["Cable: {}".format(title) for title in titles], rows=3, cols=5, gray=True, cmap='gray', sup_title='Adaptive Thresholding')
@@ -258,8 +232,8 @@ for i, image in enumerate(images):
 # Display the images
 Image.subplot(otsu_thresholded_images, titles=["Cable: {}".format(title) for title in titles], rows=3, cols=5, gray=True, cmap='gray', sup_title='Otsu Thresholding')
 # %%
-# KMeans Thresholding
-kmeans_images = [image.KMeans(k=2) for image in images]
+# Grayscale KMeans Thresholding
+kmeans_images = [image.KMeans(k=3) for image in images]
 
 # Display the images
 Image.subplot(kmeans_images, titles=["Cable: {}".format(title) for title in titles], rows=3, cols=5, gray=False, cmap='gray', sup_title='KMeans Clustering')
@@ -268,5 +242,5 @@ Image.subplot(kmeans_images, titles=["Cable: {}".format(title) for title in titl
 snake_images = [image.Snakes(to_gray=True) for image in images]
 
 # Display the images
-Image.subplot(snake_images, titles=["Cable: {}".format(title) for title in titles], rows=3, cols=5, gray=False, cmap='gray', sup_title='Active Contours (Snakes)') # type: ignore
+Image.subplot(snake_images, titles=["Cable: {}".format(title) for title in titles], rows=3, cols=5, gray=False, cmap='gray', sup_title='Snakes Thresholding') # type: ignore
 # %%
