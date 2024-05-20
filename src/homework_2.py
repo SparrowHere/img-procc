@@ -33,10 +33,10 @@ class Image:
         Snakes(`bool`) -> `np.ndarray`: Applies active contours (snakes) to the image.
     """
     def __init__(self, path: str) -> None:
-        self.path = path
-        self.image: np.ndarray = cv2.imread(path)
-        self.gray: np.ndarray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
-        self.channels: Sequence[np.ndarray] = cv2.split(self.image)
+        self.path = path    # Path to the image file
+        self.image: np.ndarray = cv2.imread(path)   # Read the image
+        self.gray: np.ndarray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)    # Convert the image to grayscale
+        self.channels: Sequence[np.ndarray] = cv2.split(self.image)     # Split the image into channels
     
     @staticmethod
     def filename(filename: str) -> int:
@@ -50,11 +50,11 @@ class Image:
             `int`: The extracted number.
 
         """
-        match = re.search(r'(\d+)', filename)
-        if match:
-            return int(match.group(1))
-        else:
-            return -1
+        match = re.search(r'(\d+)', filename)       # Search for a number in the filename
+        if match:       # If a number is found
+            return int(match.group(1))      # Return the number
+        else:       # If no number is found
+            return -1       # Return -1
         
     def show(self, image: np.ndarray = None, gray: bool = False, title: str = 'Image') -> None: # type: ignore
         """
@@ -66,14 +66,14 @@ class Image:
             title (`str`): The title of the window. Default is `'Image'`.
 
         """
-        if image is None:
-            image = self.gray if gray else self.image
-        if gray:
-            plt.imshow(image, cmap='gray')
-        else:
-            plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-        plt.title(title)
-        plt.show()
+        if image is None:       # If no image is provided
+            image = self.gray if gray else self.image       # Use the grayscale image if `gray` is True, otherwise use the original image
+        if gray:        # If the image is in grayscale
+            plt.imshow(image, cmap='gray')      # Display the image in grayscale
+        else:       # If the image is in color
+            plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))      # Display the image in color
+        plt.title(title)        # Set the title of the window
+        plt.show()      # Show the image
 
     @staticmethod
     def subplot(images: Sequence[np.ndarray], titles: Sequence[str], rows: int, cols: int, gray: bool = False, cmap: str = 'gray', sup_title: str = None) -> None: # type: ignore
@@ -89,21 +89,21 @@ class Image:
             cmap (`str`): The color map to use for displaying the images. Default is `'gray'`.
             sup_title (`str`): The super title for the figure. Default is `None`.
         """
-        fig, axes = plt.subplots(rows, cols, figsize=(20, 10))
-        for i, (image, title) in enumerate(zip(images, titles)):
-            row = i // cols
-            col = i % cols
-            if gray:
-                axes[row, col].imshow(image, cmap=cmap)
-            else:
-                axes[row, col].imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-            axes[row, col].set_title(title)
-        for ax in axes.flatten()[len(images):]:  # Hide any unused subplots
-            ax.axis('off')
-        plt.tight_layout()
-        if sup_title:
-            plt.suptitle(sup_title)
-        plt.show()
+        fig, axes = plt.subplots(rows, cols, figsize=(20, 10))      # Create a subplot
+        for i, (image, title) in enumerate(zip(images, titles)):        # Loop through the images and titles
+            row = i // cols     # Calculate the row number
+            col = i % cols      # Calculate the column number
+            if gray:        # If the image is in grayscale
+                axes[row, col].imshow(image, cmap=cmap)     # Display the image in grayscale
+            else:       # If the image is in color
+                axes[row, col].imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))       # Display the image in color
+            axes[row, col].set_title(title)     # Set the title of the image
+        for ax in axes.flatten()[len(images):]:     # Hide any unused subplots
+            ax.axis('off')      # Turn off the axes
+        plt.tight_layout()      # Adjust the layout
+        if sup_title:       # If a super title is provided
+            plt.suptitle(sup_title)     # Set the super title
+        plt.show()      # Show the subplot
         
     def adaptiveThresh(self, to_gray: bool = False, channel: int = 0) -> np.ndarray:
         """
@@ -117,10 +117,10 @@ class Image:
             `np.ndarray`: The thresholded image.
 
         """
-        image = self.gray if to_gray else self.channels[channel]
+        image = self.gray if to_gray else self.channels[channel]        # Convert the image to grayscale if `to_gray` is True
         blurred_image = self.denoise(image, strategy='gaussian')      # Apply blur to the image to remove noise
-        threshold = cv2.adaptiveThreshold(blurred_image, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 11, 2)
-        return threshold
+        threshold = cv2.adaptiveThreshold(blurred_image, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 11, 2)     # Apply adaptive thresholding
+        return threshold        # Return the thresholded image
     
     def otsuThresh(self, to_gray: bool = True, channel: int = 0) -> np.ndarray:
         """
@@ -134,13 +134,13 @@ class Image:
             `np.ndarray`: The thresholded image.
 
         """
-        if to_gray:
-            image = self.gray
-        else:
-            image = self.channels[channel]
+        if to_gray:     # Convert the image to grayscale if `to_gray` is True
+            image = self.gray       # Use the grayscale image
+        else:       # If the image is in color
+            image = self.channels[channel]      # Use the specified channel
         blurred_image = self.denoise(image, strategy='gaussian')      # Apply blur to the image to remove noise
-        _, threshold = cv2.threshold(blurred_image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        return threshold
+        _, threshold = cv2.threshold(blurred_image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)        # Apply Otsu's thresholding
+        return threshold        # Return the thresholded image
     
     def denoise(self, image: np.ndarray, strategy: str = 'median') -> np.ndarray:
         """
@@ -154,13 +154,13 @@ class Image:
             `np.ndarray`: The denoised image.
 
         """
-        if strategy == 'median':
-            denoised_image = cv2.medianBlur(image, 5)
-        elif strategy == 'gaussian':
-            denoised_image = cv2.GaussianBlur(image, (5, 5), 0)
-        else:
-            raise ValueError("Unknown denoising strategy")
-        return denoised_image
+        if strategy == 'median':        # If the denoising strategy is median
+            denoised_image = cv2.medianBlur(image, 5)       # Apply median blur to the image
+        elif strategy == 'gaussian':        # If the denoising strategy is Gaussian
+            denoised_image = cv2.GaussianBlur(image, (5, 5), 0)     # Apply Gaussian blur to the image
+        else:       # If the denoising strategy is unknown
+            raise ValueError("Unknown denoising strategy")      # Raise a ValueError
+        return denoised_image       # Return the denoised image
 
     def KMeans(self, to_gray: bool = True, k: int = 2) -> np.ndarray:
         """
@@ -173,15 +173,15 @@ class Image:
             `np.ndarray`: The clustered image.
 
         """
-        image = self.gray if to_gray else self.image
-        Z = image.reshape((-1, 3))
-        Z = np.float32(Z)
-        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.2)
-        _, labels, centers = cv2.kmeans(Z, k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS) # type: ignore
-        centers = np.uint8(centers)
-        clustered_image = centers[labels.flatten()] # type: ignore
-        clustered_image = clustered_image.reshape((image.shape))
-        return clustered_image
+        image = self.gray if to_gray else self.image        # Convert the image to grayscale if `to_gray` is True
+        Z = image.reshape((-1, 3))      # Reshape the image to a 2D array of pixels with 3 channels
+        Z = np.float32(Z)       # Convert the image datatype to float32
+        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.2)       # Define the criteria for the algorithm   
+        _, labels, centers = cv2.kmeans(Z, k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS) # Apply K-Means clustering to the image
+        centers = np.uint8(centers)         # Convert the centers to 8-bit unsigned integers
+        clustered_image = centers[labels.flatten()]     # Get the clustered image
+        clustered_image = clustered_image.reshape((image.shape))        # Reshape the clustered image to the original shape
+        return clustered_image      # Return the clustered image
 
     def Snakes(self, to_gray: bool = True) -> np.ndarray:
         """
@@ -194,15 +194,15 @@ class Image:
             `np.ndarray`: The image with the active contours.
 
         """
-        image = self.gray if to_gray else cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
+        image = self.gray if to_gray else cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)       # Convert the image to grayscale if `to_gray` is True
         
-        blurred_image = cv2.GaussianBlur(image, (5, 5), 0)
-        edges = cv2.Canny(blurred_image, 50, 150)
+        blurred_image = cv2.GaussianBlur(image, (5, 5), 0)      # Apply Gaussian blur to the image
+        edges = cv2.Canny(blurred_image, 50, 150)       # Detect edges in the image using Canny edge detection
         
-        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        contour_image = np.zeros_like(image)
-        cv2.drawContours(contour_image, contours, -1, (255, 255, 255), 2)
-        return contour_image
+        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)       # Find the contours in the image    
+        contour_image = np.zeros_like(image)        # Create an empty image to draw the contours
+        cv2.drawContours(contour_image, contours, -1, (255, 255, 255), 2)       # Draw the contours on the image
+        return contour_image        # Return the image with the active contours
 # %%
 DIR = "/home/sparrow/cv/data/cables"
 
@@ -227,6 +227,7 @@ titles = [Image.filename(image.path) for image in images]
 # Adaptive Thresholding
 adaptive_thresholded_images = []
 
+# Apply adaptive thresholding to the images
 for i, image in enumerate(images):
     threshold = image.adaptiveThresh(to_gray=True)
     adaptive_thresholded_images.append(threshold)
@@ -243,6 +244,7 @@ Image.subplot(contrast_images, titles=["Cable: {}".format(title) for title in ti
 # Otsu Thresholding
 otsu_thresholded_images = []
 
+# Apply Otsu's thresholding to the images
 for i, image in enumerate(images):
     threshold = image.otsuThresh(to_gray=True)
     otsu_thresholded_images.append(threshold)
@@ -261,3 +263,4 @@ snake_images = [image.Snakes(to_gray=True) for image in images]
 
 # Display the images
 Image.subplot(snake_images, titles=["Cable: {}".format(title) for title in titles], rows=3, cols=5, gray=False, cmap='gray', sup_title='Snakes Thresholding') # type: ignore
+# %%
