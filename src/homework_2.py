@@ -13,12 +13,30 @@ import numpy as np
 import matplotlib.pyplot as plt
 # %%
 class Image:
+    """
+    A class to represent an image. It provides various image processing methods including various thresholding techniques, denoising, and clustering.
+    
+    Attributes:
+        path (`str`): The path to the image file.
+        image (`np.ndarray`): The original image.
+        gray (`np.ndarray`): The grayscale version of the image.
+        channels (`Sequence[np.ndarray]`): The channels of the image.
+        
+    Methods:
+        filename(`str`) -> `int`: Extracts the number from the filename.
+        show(`np.ndarray`, `bool`, `str`) -> `None`: Displays the image.
+        subplot(`Sequence[np.ndarray]`, `Sequence[str]`, `int`, `int`, `bool`, `str`, `str`) -> `None`: Displays multiple images in a subplot.
+        adaptiveThresh(`bool`, `int`) -> `np.ndarray`: Applies adaptive thresholding to the image.
+        otsuThresh(`bool`, `int`) -> `np.ndarray`: Applies Otsu's thresholding to the image.
+        denoise(`np.ndarray`, `str`) -> `np.ndarray`: Applies denoising to the image.
+        KMeans(`bool`, `int`) -> `np.ndarray`: Applies K-Means clustering to the image.
+        Snakes(`bool`) -> `np.ndarray`: Applies active contours (snakes) to the image.
+    """
     def __init__(self, path: str) -> None:
         self.path = path
         self.image: np.ndarray = cv2.imread(path)
         self.gray: np.ndarray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
         self.channels: Sequence[np.ndarray] = cv2.split(self.image)
-        self.store_evolution_in = lambda lst: lambda x: lst.append(np.copy(x))
     
     @staticmethod
     def filename(filename: str) -> int:
@@ -100,7 +118,7 @@ class Image:
 
         """
         image = self.gray if to_gray else self.channels[channel]
-        blurred_image = cv2.GaussianBlur(image, (5, 5), 0)      # Apply blur to the image to remove noise
+        blurred_image = self.denoise(image, strategy='gaussian')      # Apply blur to the image to remove noise
         threshold = cv2.adaptiveThreshold(blurred_image, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 11, 2)
         return threshold
     
@@ -120,7 +138,7 @@ class Image:
             image = self.gray
         else:
             image = self.channels[channel]
-        blurred_image = cv2.GaussianBlur(image, (5, 5), 0)      # Apply blur to the image to remove noise  
+        blurred_image = self.denoise(image, strategy='gaussian')      # Apply blur to the image to remove noise
         _, threshold = cv2.threshold(blurred_image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         return threshold
     
@@ -243,4 +261,3 @@ snake_images = [image.Snakes(to_gray=True) for image in images]
 
 # Display the images
 Image.subplot(snake_images, titles=["Cable: {}".format(title) for title in titles], rows=3, cols=5, gray=False, cmap='gray', sup_title='Snakes Thresholding') # type: ignore
-# %%
