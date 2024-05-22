@@ -3,6 +3,7 @@ from typing import Sequence
 import re
 import cv2
 import numpy as np
+import skimage
 import matplotlib.pyplot as plt
 
 plt.style.use("seaborn-v0_8-paper")
@@ -192,9 +193,8 @@ class Image:
 
         Returns:
             `np.ndarray`: The image with the active contours.
-
         """
-        image = self.gray if to_gray else cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)       # Convert the image to grayscale if `to_gray` is True
+        image = self.gray if to_gray else self.image       # Convert the image to grayscale if `to_gray` is True
         
         blurred_image = cv2.GaussianBlur(image, (5, 5), 0)      # Apply Gaussian blur to the image
         edges = cv2.Canny(blurred_image, 50, 150)       # Detect edges in the image using Canny edge detection
@@ -203,6 +203,32 @@ class Image:
         contour_image = np.zeros_like(image)        # Create an empty image to draw the contours
         cv2.drawContours(contour_image, contours, -1, (255, 255, 255), 2)       # Draw the contours on the image
         return contour_image        # Return the image with the active contours
+    
+    def levelSetSeg(self, to_gray: bool = True) -> np.ndarray:
+        """
+        Applies chan-vese level set segmentation to the image.
+        
+        Parameters:
+            to_gray (`bool`): Whether to convert the image to grayscale before applying the segmentation. Default is `True`.
+            
+        Returns:
+            `np.ndarray`: The segmented image.
+        """
+        image = self.gray if to_gray else self.image       # Convert the image to grayscale if `to_gray` is True
+            
+        blurred_image = cv2.GaussianBlur(image, (5, 5), 0)      # Apply Gaussian blur to the image
+        segmented_image = skimage.segmentation.chan_vese(    # Apply chan-vese level set segmentation to the image
+            blurred_image,     # The image to segment
+            mu=0.25,    # Weight of the length term
+            lambda1=1,  
+            lambda2=1,  
+            tol=1e-3,   # Tolerance for the level set evolution
+            max_num_iter=1000,   # Maximum number of iterations
+            dt=0.5,    # Time step for the level set evolution
+            init_level_set="checkerboard",
+            extended_output=False   # Whether to return extra outputs
+        )
+        return segmented_image      # Return the segmented image
 # %%
 DIR = "/home/sparrow/cv/data/cables"
 
@@ -264,3 +290,8 @@ snake_images = [image.Snakes(to_gray=True) for image in images]
 # Display the images
 Image.subplot(snake_images, titles=["Cable: {}".format(title) for title in titles], rows=3, cols=5, gray=False, cmap='gray', sup_title='Snakes Thresholding') # type: ignore
 # %%
+# Level Set Segmentation
+level_set_images = [image.levelSetSeg(to_gray=True) for image in images]
+
+# Display the images
+Image.subplot(level_set_images, titles=["Cable: {}".format(title) for title in titles], rows=3, cols=5, gray=True, cmap='gray', sup_title='Level Set Segmentation')
