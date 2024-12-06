@@ -266,7 +266,6 @@ class Processing:
         return filtered_image
 
 #%% Preparation
-
 Path: str = "/home/sparrow/cv/images"
 img_gray: np.ndarray = cv2.imread(Path + "/gray9.jpg")
 img_dark: np.ndarray = cv2.imread(Path + "/dark9.jpg")
@@ -279,21 +278,18 @@ img_gray = cv2.cvtColor(img_gray, cv2.COLOR_RGB2GRAY)
 img_shadow = cv2.cvtColor(img_shadow, cv2.COLOR_RGB2GRAY)
 img_nn = cv2.cvtColor(img_nn, cv2.COLOR_RGB2GRAY)
 img_sp = cv2.cvtColor(img_sp, cv2.COLOR_RGB2GRAY)
-#%% Q1a | Histograms and Restoration Operations
 
+#%% Q1a | Histograms and Restoration Operations
 Processing.plot_histogram(img_gray, "#ff7f0e", "Histogram of the Gray Image")
 Processing.plot_histogram(img_dark, "#1f77b4", "Histogram of the Gray Image")
 # %% Q1a | Restoration - Gamma Correction
-
 img_dark_corrected = Processing.gamma_correction(img_dark, 0.5)
 cv2.imshow("Gamma Corrected Image (gamma = 0.5)", img_dark_corrected)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
 
 Processing.plot_histogram(img_dark_corrected, "#1f77b4", "Gamma Corrected Image (Gamma = 0.5)")
-
 # %% Q1a | Restoration - Logarithm Transform
-
 dark_transformed = Processing.log_transform(img_dark, 40)
 
 cv2.imshow("Dark Image", img_dark)
@@ -304,7 +300,6 @@ cv2.destroyAllWindows()
 Processing.plot_histogram(dark_transformed, "#1f77b4", "Log-Transformed Dark Image (C = 40)")
 
 # %% Q1b | Histogram Equalization (OpenCV)
-
 img_dark_eq = cv2.equalizeHist(img_dark)
 
 cv2.imshow("Dark Equalized Image", img_dark_eq)
@@ -313,7 +308,6 @@ cv2.destroyAllWindows()
 
 Processing.plot_histogram(img_dark_eq, "#1f77b4", "Dark Equalized Image (OpenCV)")
 # %% Q1b | Histogram Equalization (from Scratch)
-
 img_dark_eq = Processing.histogram_equalization(img_dark)
 
 cv2.imshow("Dark Equalized Image", img_dark_eq)
