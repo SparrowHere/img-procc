@@ -88,10 +88,10 @@ class Processing:
         CDF_norm = ((CDF - CDF.min()) * 255) / (CDF.max() - CDF.min())
         equalized_image = np.interp(image.ravel(), bins[:-1], CDF_norm)
         equalized_image = equalized_image.reshape(image.shape)
+        
         return equalized_image.astype(np.uint8)
     
     @staticmethod
-
     def ideal_LP_FFT(image: np.ndarray, cutoff_frequency: float) -> tuple[np.ndarray]:
         """
         Apply ideal low-pass filter to the input image in frequency domain.
@@ -213,6 +213,7 @@ class Processing:
         """
         laplacian_kernel = np.array([[0, 1, 0], [1, -4, 1], [0, 1, 0]])
         filtered_image = cv2.filter2D(image, -1, laplacian_kernel)
+        
         return filtered_image
 
     @staticmethod
@@ -228,6 +229,7 @@ class Processing:
         """
         sharpen_kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
         filtered_image = cv2.filter2D(image, -1, sharpen_kernel)
+        
         return filtered_image
 
     @staticmethod
@@ -243,6 +245,7 @@ class Processing:
             np.ndarray: Filtered image.
         """
         filtered_image = cv2.medianBlur(image, kernel_size)
+        
         return filtered_image
 
     @staticmethod
@@ -259,6 +262,7 @@ class Processing:
             np.ndarray: Filtered image.
         """
         filtered_image = cv2.GaussianBlur(image, kernel_size, sigma)
+        
         return filtered_image
 
 #%% Preparation
